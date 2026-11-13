@@ -5,6 +5,7 @@ Deterministic, offline, no input: the grader runs the program twice
 and both runs write byte-identical output.
 """
 
+import os
 from pathlib import Path
 
 JOKE = (
@@ -13,11 +14,27 @@ JOKE = (
     "'All tests pass.'"
 )
 
+MAX_CHARS = 280
+OUTPUT_PATH = Path("/output/entry.txt")
+
+
+def render() -> bytes:
+    """Return the entry bytes, normalised and checked against the rules."""
+    text = JOKE.strip()
+    if not 1 <= len(text) <= MAX_CHARS:
+        raise ValueError(f"joke must be 1-{MAX_CHARS} chars, got {len(text)}")
+    return text.encode("utf-8")
+
 
 def main() -> None:
-    out = Path("/output/entry.txt")
+    data = render()
+    out = OUTPUT_PATH
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_bytes(JOKE.encode("utf-8"))
+    # Write to a sibling temp file, then rename, so the grader can never
+    # observe a partially written entry.
+    tmp = out.with_name(out.name + ".tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, out)
 
 
 if __name__ == "__main__":
